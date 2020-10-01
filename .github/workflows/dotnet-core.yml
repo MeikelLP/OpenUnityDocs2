@@ -7,10 +7,15 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-
+  download_docs:
     runs-on: ubuntu-latest
-
+    steps:      
+      - name: Download docs
+        uses: workflow/nix-shell-action@v1
+        with:
+          script: wget https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
+  build:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET Core
@@ -21,5 +26,9 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    - name: Test
-      run: dotnet test --no-restore --verbosity normal
+    - name: Upload Converter
+      uses: actions/upload-artifact@v2.2.0
+      with:
+        name: converter
+        path: OpenUnityDocs.Converter/bin/Debug/netcoreapp3.1/
+        if-no-files-found: error
