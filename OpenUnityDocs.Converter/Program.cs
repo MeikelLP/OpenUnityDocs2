@@ -30,9 +30,22 @@ namespace OpenUnityDocs.Converter
 
             var parser = new UnityDocsConverter();
 
-            var files = !string.IsNullOrWhiteSpace(options.Folder)
-                ? Directory.GetFiles(options.Folder)!
-                : new[] {options.FilePath!};
+            string[] files;
+            if (!string.IsNullOrWhiteSpace(options.Folder))
+            {
+                if (!options.Ignored.Any())
+                {
+                    options.Ignored = new[] {"UnityIAPStoreGuides.html"}; // this file is garbage
+                }
+                files = Directory.GetFiles(options.Folder)!
+                    .Where(x => !options.Ignored.Contains(Path.GetFileName(x)))
+                    .ToArray();
+            }
+            else
+            {
+                files = new[] {options.FilePath!};
+            }
+
             var errors = new Dictionary<string, Exception>();
             foreach (var filePath in files)
             {
