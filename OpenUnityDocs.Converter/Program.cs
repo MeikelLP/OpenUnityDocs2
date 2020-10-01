@@ -31,8 +31,8 @@ namespace OpenUnityDocs.Converter
             var parser = new UnityDocsConverter();
 
             var files = !string.IsNullOrWhiteSpace(options.Folder)
-                ? Directory.GetFiles(options.Folder)
-                : new[] {options.FilePath};
+                ? Directory.GetFiles(options.Folder)!
+                : new[] {options.FilePath!};
             var errors = new Dictionary<string, Exception>();
             foreach (var filePath in files)
             {
@@ -45,7 +45,7 @@ namespace OpenUnityDocs.Converter
                 }
                 catch (Exception e)
                 {
-                    errors.Add("filePath", e);
+                    errors.Add(filePath, e);
                 }
             }
 
