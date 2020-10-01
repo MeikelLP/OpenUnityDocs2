@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using CommandLine;
 
-namespace OpenUnityDocs.Parser
+namespace OpenUnityDocs.Converter
 {
     public static class Program
     {
@@ -23,7 +23,7 @@ namespace OpenUnityDocs.Parser
                 Directory.CreateDirectory(options.OutputDir);
             }
 
-            var parser = new UnityDocsParser();
+            var parser = new UnityDocsConverter();
 
             var files = !string.IsNullOrWhiteSpace(options.Folder)
                 ? Directory.GetFiles(options.Folder)

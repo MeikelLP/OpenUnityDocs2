@@ -1,6 +1,6 @@
 ﻿using HtmlAgilityPack;
 
-namespace OpenUnityDocs.Parser
+namespace OpenUnityDocs.Converter
 {
     public static class HtmlUtility
     {

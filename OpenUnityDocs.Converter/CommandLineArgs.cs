@@ -1,6 +1,6 @@
 ﻿using CommandLine;
 
-namespace OpenUnityDocs.Parser
+namespace OpenUnityDocs.Converter
 {
     public class CommandLineArgs
     {

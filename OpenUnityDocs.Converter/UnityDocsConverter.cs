@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 
-namespace OpenUnityDocs.Parser
+namespace OpenUnityDocs.Converter
 {
-    public class UnityDocsParser
+    public class UnityDocsConverter
     {
         private static readonly Regex EmptyRowsRegex = new Regex("\n{2,}", RegexOptions.Compiled);
         private static readonly Regex NoSpaceAfterDot = new Regex(".(\\s+)$", RegexOptions.Compiled);

@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenUnityDocs.Parser", "OpenUnityDocs.Parser\OpenUnityDocs.Parser.csproj", "{43CA63AF-E509-4E34-AACC-31232FF41DB1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenUnityDocs.Converter", "OpenUnityDocs.Converter\OpenUnityDocs.Converter.csproj", "{43CA63AF-E509-4E34-AACC-31232FF41DB1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenUnityDocs.Parser.Tests", "OpenUnityDocs.Parser.Tests\OpenUnityDocs.Parser.Tests.csproj", "{390F7F8B-BAF1-4638-B8F1-E4E4F84D0582}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenUnityDocs.Converter.Tests", "OpenUnityDocs.Converter.Tests\OpenUnityDocs.Converter.Tests.csproj", "{390F7F8B-BAF1-4638-B8F1-E4E4F84D0582}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
