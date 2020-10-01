@@ -44,7 +44,7 @@ jobs:
         mkdir -p docs
         unzip -q -d docs/2019.4 docs.zip
     - name: Run converter
-      run: dotnet bin/OpenUnityDocs.Converter.dll -m docs/2019.4/Documentation/en/Manual/ -o output/2019.4 --clean
+      run: dotnet bin/OpenUnityDocs.Converter.dll -m docs/2019.4/Documentation/en/Manual/ -o output/2019.4
     - name: Upload markdown
       uses: actions/upload-artifact@v2.2.0
       with:
