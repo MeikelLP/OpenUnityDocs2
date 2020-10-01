@@ -13,7 +13,9 @@ jobs:
       - name: Download docs
         uses: workflow/nix-shell-action@v1
         with:
-          script: wget https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
+          script: |
+            curl -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
+            unzip -d UnityDocumentation docs.zip
   build:
     runs-on: ubuntu-latest
     steps:
@@ -30,5 +32,5 @@ jobs:
       uses: actions/upload-artifact@v2.2.0
       with:
         name: converter
-        path: OpenUnityDocs.Converter/bin/Debug/netcoreapp3.1/
+        path: OpenUnityDocs.Converter/bin/Release/netcoreapp3.1/
         if-no-files-found: error
