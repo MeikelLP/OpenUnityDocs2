@@ -11,11 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:      
       - name: Download docs
-        uses: workflow/nix-shell-action@v1
-        with:
-          script: |
-            curl -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
-            unzip -d UnityDocumentation docs.zip
+        run: |
+          curl -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
+          unzip -d UnityDocumentation docs.zip
   build:
     runs-on: ubuntu-latest
     steps:
