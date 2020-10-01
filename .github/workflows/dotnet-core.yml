@@ -18,7 +18,7 @@ jobs:
       - name: upload docs
         uses: actions/upload-artifact@v2.2.0
         with:
-          name: docs/2019.4
+          name: docs-2019.4
           path: docs/2019.4
           if-no-files-found: error
   build:
@@ -50,7 +50,7 @@ jobs:
         path: bin
     - uses: actions/download-artifact@v2      
       with:
-        name: docs/2019.4
+        name: docs-2019.4
         path: docs/2019.4 
     - name: Run converter
       run: dotnet bin/OpenUnityDocs.Converter.dll -m docs/2019.4/Documentation/en/Manual/ -o output/2019.4 --clean
