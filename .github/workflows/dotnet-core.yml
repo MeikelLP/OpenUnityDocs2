@@ -7,20 +7,6 @@ on:
     branches: [ main ]
 
 jobs:
-  download_docs:
-    runs-on: ubuntu-latest
-    steps:      
-      - name: Download docs
-        run: |
-          curl -s -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
-          mkdir -p docs
-          unzip -q -d docs/2019.4 docs.zip
-      - name: upload docs
-        uses: actions/upload-artifact@v2.2.0
-        with:
-          name: docs-2019.4
-          path: docs/2019.4
-          if-no-files-found: error
   build:
     runs-on: ubuntu-latest
     steps:
@@ -42,16 +28,17 @@ jobs:
   convert:
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/dotnet/core/runtime:3.1
-    needs: [download_docs, build]
+    needs: build
     steps:
     - uses: actions/download-artifact@v2      
       with:
         name: converter
         path: bin
-    - uses: actions/download-artifact@v2      
-      with:
-        name: docs-2019.4
-        path: docs/2019.4 
+    - name: Download docs
+      run: |
+        curl -s -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
+        mkdir -p docs
+        unzip -q -d docs/2019.4 docs.zip
     - name: Run converter
       run: dotnet bin/OpenUnityDocs.Converter.dll -m docs/2019.4/Documentation/en/Manual/ -o output/2019.4 --clean
     - name: Upload markdown
