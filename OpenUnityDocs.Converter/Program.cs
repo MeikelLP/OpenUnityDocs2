@@ -16,7 +16,10 @@ namespace OpenUnityDocs.Converter
         {
             if (options.Clean)
             {
-                Directory.Delete(options.OutputDir, true);
+                if (Directory.Exists(options.OutputDir))
+                {
+                    Directory.Delete(options.OutputDir, true);
+                }
             }
             if (!Directory.Exists(options.OutputDir))
             {
@@ -39,7 +42,7 @@ namespace OpenUnityDocs.Converter
                 }
                 catch (Exception e)
                 {
-                    await Console.Error.WriteAsync($"Failed to parse file \"{filePath}\"");
+                    await Console.Error.WriteAsync($"Failed to parse file \"{filePath}\". {e.Message}");
                 }
             }
         }
