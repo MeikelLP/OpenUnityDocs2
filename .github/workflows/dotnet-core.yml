@@ -12,7 +12,7 @@ jobs:
     steps:      
       - name: Download docs
         run: |
-          curl -o -s docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
+          curl -s -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
           unzip -d -q docs/2019.4 docs.zip
       - name: upload docs
         uses: actions/upload-artifact@v2.2.0
