@@ -36,6 +36,7 @@ jobs:
         path: bin
     - name: install-deps
       run: |
+        apt-get update
         apt-get install unzip
     - name: Download docs
       run: |
