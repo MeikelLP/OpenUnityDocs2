@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
 
@@ -9,7 +11,7 @@ namespace OpenUnityDocs.Converter
     {
         private static void Main(string[] args)
         {
-            CommandLine.Parser.Default.ParseArguments<CommandLineArgs>(args).WithParsed(options => Task.Run(() => Action(options)).Wait());
+            Parser.Default.ParseArguments<CommandLineArgs>(args).WithParsed(options => Action(options).Wait());
         }
 
         private static async Task Action(CommandLineArgs options)
@@ -31,6 +33,7 @@ namespace OpenUnityDocs.Converter
             var files = !string.IsNullOrWhiteSpace(options.Folder)
                 ? Directory.GetFiles(options.Folder)
                 : new[] {options.FilePath};
+            var errors = new Dictionary<string, Exception>();
             foreach (var filePath in files)
             {
                 try
@@ -42,8 +45,15 @@ namespace OpenUnityDocs.Converter
                 }
                 catch (Exception e)
                 {
-                    await Console.Error.WriteAsync($"Failed to parse file \"{filePath}\". {e.Message}");
+                    errors.Add("filePath", e);
                 }
+            }
+
+            if (errors.Count > 0)
+            {
+                var errorLines = string.Join("\n", errors.Select(x => $"{x.Key} => {x.Value.Message}"));
+                await Console.Error.WriteLineAsync($"Failed to parse file(s):\n{errorLines}");
+                Environment.Exit((int) ExitCode.FAILED_TO_PARSE_SOME_FILES);
             }
         }
     }
