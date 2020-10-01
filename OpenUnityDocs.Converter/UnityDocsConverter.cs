@@ -22,21 +22,20 @@ namespace OpenUnityDocs.Converter
 
             var contentNode = doc.DocumentNode.SelectSingleNode(
                 ".//*[@id=\"content-wrap\"]/div/div/div[contains(concat(\" \",normalize-space(@class),\" \"),\" section \")]");
-            var breadCrumb =
-                contentNode.SelectNodes(
-                    ".//div[contains(concat(\" \",normalize-space(@class),\" \"),\" breadcrumbs \")][contains(concat(\" \",normalize-space(@class),\" \"),\" clear \")]/ul/li");
-            var data = new Dictionary<string, string>();
-            data.Add("parent", breadCrumb.Reverse().Skip(1).Take(1).Single().InnerText.Trim());
+            // var breadCrumb =
+            //     contentNode.SelectNodes(
+            //         ".//div[contains(concat(\" \",normalize-space(@class),\" \"),\" breadcrumbs \")][contains(concat(\" \",normalize-space(@class),\" \"),\" clear \")]/ul/li");
+            // var parent = breadCrumb.Reverse().Skip(1).Take(1).Single().InnerText.Trim();
 
             var headerNode = contentNode.SelectSingleNode(".//h1") ?? contentNode.SelectSingleNode(".//h2"); // because unity doesn't like h1 some times
-            data.Add("name", headerNode.InnerText.Trim());
+            var name = headerNode.InnerText.Trim();
 
             var currentNode = headerNode.NextSibling;
             // fix unity stuff
             FixUnityStuff(contentNode);
 
             var sb = new StringBuilder();
-            sb.Append($"# {data["name"]}\n\n");
+            sb.Append($"# {name}\n\n");
             while ((currentNode = currentNode.NextSibling) != null && currentNode.Id != "_content") // stop at id="_content"
             {
                 var element = GetMarkdown(currentNode);
