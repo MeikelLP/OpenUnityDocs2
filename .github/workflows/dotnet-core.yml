@@ -48,6 +48,6 @@ jobs:
     - name: Upload markdown
       uses: actions/upload-artifact@v2.2.0
       with:
-        name: md/2019.4
+        name: md-2019.4
         path: output/2019.4
         if-no-files-found: error
