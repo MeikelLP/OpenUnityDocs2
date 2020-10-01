@@ -34,6 +34,8 @@ jobs:
       with:
         name: converter
         path: bin
+    - name: install-deps
+      run: apt install unzip
     - name: Download docs
       run: |
         curl -s -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
