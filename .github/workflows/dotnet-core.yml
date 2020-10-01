@@ -12,8 +12,14 @@ jobs:
     steps:      
       - name: Download docs
         run: |
-          curl -o docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
-          unzip -d UnityDocumentation docs.zip
+          curl -o -s docs.zip https://storage.googleapis.com/docscloudstorage/2019.4/UnityDocumentation.zip
+          unzip -d -q docs/2019.4 docs.zip
+      - name: upload docs
+        uses: actions/upload-artifact@v2.2.0
+        with:
+          name: docs/2019.4
+          path: docs/2019.4
+          if-no-files-found: error
   build:
     runs-on: ubuntu-latest
     steps:
@@ -31,4 +37,25 @@ jobs:
       with:
         name: converter
         path: OpenUnityDocs.Converter/bin/Release/netcoreapp3.1/
+        if-no-files-found: error
+  convert:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/core/runtime:3.1
+    needs: [download_docs, build]
+    steps:
+    - uses: actions/download-artifact@v2      
+      with:
+        name: converter
+        path: bin
+    - uses: actions/download-artifact@v2      
+      with:
+        name: docs/2019.4
+        path: docs/2019.4 
+    - name: Run converter
+      run: dotnet bin/OpenUnityDocs.Converter.dll -m docs/2019.4 -o output/2019.4 --clean
+    - name: Upload markdown
+      uses: actions/upload-artifact@v2.2.0
+      with:
+        name: md/2019.4
+        path: output/2019.4
         if-no-files-found: error
