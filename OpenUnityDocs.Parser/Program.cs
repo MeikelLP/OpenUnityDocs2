@@ -39,7 +39,7 @@ namespace OpenUnityDocs.Parser
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Failed to parse file \"{filePath}\"");
+                    await Console.Error.WriteAsync($"Failed to parse file \"{filePath}\"");
                 }
             }
         }
