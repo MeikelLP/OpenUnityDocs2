@@ -9,7 +9,17 @@ namespace OpenUnityDocs.Converter
             HtmlNode parent = node;
             while ((parent = parent.ParentNode) != null)
             {
-                if (name == parent.Name) return true;
+                if (parent.Name == name) return true;
+            }
+
+            return false;
+        }
+        public static bool HasParentWithClass(this HtmlNode node, string className)
+        {
+            HtmlNode parent = node;
+            while ((parent = parent.ParentNode) != null)
+            {
+                if (parent.HasClass(className)) return true;
             }
 
             return false;

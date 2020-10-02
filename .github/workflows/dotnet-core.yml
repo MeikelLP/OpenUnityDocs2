@@ -27,14 +27,15 @@ jobs:
         if-no-files-found: error
   convert:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/dotnet/core/runtime:3.1
+    container: mcr.microsoft.com/dotnet/core/sdk:3.1
     needs: build
     steps:
-    - uses: actions/download-artifact@v2      
+    - name: Download converter
+      uses: actions/download-artifact@v2      
       with:
         name: converter
         path: bin
-    - name: install-deps
+    - name: install dependencies
       run: |
         apt-get update
         apt-get install unzip
@@ -44,7 +45,9 @@ jobs:
         mkdir -p docs
         unzip -q -d docs/2019.4 docs.zip
     - name: Run converter
-      run: dotnet bin/OpenUnityDocs.Converter.dll -m docs/2019.4/Documentation/en/Manual/ -o output/2019.4
+      run: |
+        dotnet bin/OpenUnityDocs.Converter.dll docs/2019.4/Documentation/en/Manual/ output/2019.4/manual
+        dotnet bin/OpenUnityDocs.Converter.dll docs/2019.4/Documentation/en/ScriptReference/ output/2019.4/api
     - name: Upload markdown
       uses: actions/upload-artifact@v2.2.0
       with:

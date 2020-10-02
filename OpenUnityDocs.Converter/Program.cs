@@ -11,39 +11,49 @@ namespace OpenUnityDocs.Converter
     {
         private static void Main(string[] args)
         {
-            Parser.Default.ParseArguments<CommandLineArgs>(args).WithParsed(options => Action(options).Wait());
+            Parser.Default.ParseArguments<CommandLineArgs>(args).WithParsed(options => Run(options).Wait());
         }
 
-        private static async Task Action(CommandLineArgs options)
+        private static async Task Run(CommandLineArgs options)
         {
             if (options.Clean)
             {
-                if (Directory.Exists(options.OutputDir))
-                {
-                    Directory.Delete(options.OutputDir, true);
-                }
+                if (Directory.Exists(options.OutputDir)) Directory.Delete(options.OutputDir, true);
             }
-            if (!Directory.Exists(options.OutputDir))
+
+            if (!Directory.Exists(options.OutputDir)) Directory.CreateDirectory(options.OutputDir);
+
+            var dirInfo = new DirectoryInfo(options.InputPath);
+            if (!dirInfo.Exists && !File.Exists(options.InputPath))
             {
-                Directory.CreateDirectory(options.OutputDir);
+                await Console.Error.WriteAsync($"Directory or file does not exist: {options.InputPath}");
+                Environment.Exit((int) ExitCode.INPUT_INVALID);
             }
 
-            var parser = new UnityDocsConverter();
+            if (!options.Ignored.Any())
+            {
+                options.Ignored = new[] {"UnityIAPStoreGuides.html", "30_search.html", "AssetImporters.ScriptedImporter.Awake.html", "EditorWindow.OnDidOpenScene.html"}; // these files are useless
+            }
 
+            // use dir if path is a dir
+            // else if not absolute path try find file in current dir
+            // else (if is absolute path) use file path
             string[] files;
-            if (!string.IsNullOrWhiteSpace(options.Folder))
+            if (dirInfo.Exists)
             {
-                if (!options.Ignored.Any())
-                {
-                    options.Ignored = new[] {"UnityIAPStoreGuides.html"}; // this file is garbage
-                }
-                files = Directory.GetFiles(options.Folder)!
+                files = Directory.GetFiles(dirInfo.FullName)!
+                    .Where(x => !options.Ignored.Contains(Path.GetFileName(x)))
+                    .ToArray();
+            }
+            else if (!Path.IsPathRooted(options.InputPath))
+            {
+                files = Directory.GetFiles(".", options.InputPath)!
                     .Where(x => !options.Ignored.Contains(Path.GetFileName(x)))
                     .ToArray();
             }
             else
             {
-                files = new[] {options.FilePath!};
+                files = new[] {options.InputPath};
             }
 
             var errors = new Dictionary<string, Exception>();
@@ -51,9 +61,10 @@ namespace OpenUnityDocs.Converter
             {
                 try
                 {
-                    var markdown = await parser.ParseAsync(filePath!);
+                    var markdown = await UnityDocsConverter.ParseAsync(filePath!);
 
-                    var outFileName = Path.Combine(options.OutputDir, Path.ChangeExtension(Path.GetFileName(filePath), ".md")!);
+                    var outFileName = Path.Combine(options.OutputDir,
+                        Path.ChangeExtension(Path.GetFileName(filePath), ".md")!);
                     await File.WriteAllTextAsync(outFileName, markdown.Trim() + "\n");
                 }
                 catch (Exception e)

@@ -14,7 +14,7 @@ namespace OpenUnityDocs.Converter
         private static readonly Regex EmptyRowsRegex = new Regex("\n{2,}", RegexOptions.Compiled);
         private static readonly Regex NoSpaceAfterDot = new Regex(".(\\s+)$", RegexOptions.Compiled);
         
-        public async Task<string> ParseAsync(string filePath)
+        public static async Task<string> ParseAsync(string filePath)
         {
             var text = await File.ReadAllTextAsync(filePath);
             var doc = new HtmlDocument();
@@ -27,27 +27,58 @@ namespace OpenUnityDocs.Converter
             //         ".//div[contains(concat(\" \",normalize-space(@class),\" \"),\" breadcrumbs \")][contains(concat(\" \",normalize-space(@class),\" \"),\" clear \")]/ul/li");
             // var parent = breadCrumb.Reverse().Skip(1).Take(1).Single().InnerText.Trim();
 
-            var headerNode = contentNode.SelectSingleNode(".//h1") ?? contentNode.SelectSingleNode(".//h2"); // because unity doesn't like h1 some times
-            var name = headerNode.InnerText.Trim();
-
-            var currentNode = headerNode.NextSibling;
             // fix unity stuff
             FixUnityStuff(contentNode);
 
+            string output;
+            if (contentNode.SelectNodes(
+                ".//*[contains(concat(\" \",normalize-space(@class),\" \"),\" subsection \")]") != null)
+            {
+                // ScriptReference
+                output = ParseScriptReference(contentNode);
+            }
+            else
+            {
+                // Manual
+                output =  ParseManual(contentNode);
+            }
+            output = EmptyRowsRegex.Replace(output, "\n\n");
+            return output;
+        }
+
+        private static string ParseScriptReference(HtmlNode containerNode)
+        {
+            var relevantNodes = containerNode.SelectNodes(".//*[contains(concat(\" \",normalize-space(@class),\" \"),\" subsection \")]");
+
+            var name = containerNode.SelectSingleNode(".//h1").InnerText;
+            
+            var sb = new StringBuilder();
+            sb.Append($"# {name}\n\n");
+            foreach (var relevantNode in relevantNodes)
+            {
+                var element = GetMarkdown(relevantNode);
+                sb.Append(element);
+            }
+
+            return sb.ToString();
+        }
+
+        private static string ParseManual(HtmlNode containerNode)
+        {
+            var headerNode = containerNode.SelectSingleNode(".//h1") ?? containerNode.SelectSingleNode(".//h2"); // because unity doesn't like h1 some times
+            var name = headerNode.InnerText.Trim();
+
+            var currentNode = headerNode.NextSibling;
+            
             var sb = new StringBuilder();
             sb.Append($"# {name}\n\n");
             while ((currentNode = currentNode.NextSibling) != null && currentNode.Id != "_content") // stop at id="_content"
             {
                 var element = GetMarkdown(currentNode);
-                if (!string.IsNullOrWhiteSpace(element))
-                {
-                    sb.Append(element);
-                }
+                sb.Append(element);
             }
 
-            var output = sb.ToString();
-            output = EmptyRowsRegex.Replace(output, "\n\n");
-            return output;
+            return sb.ToString();
         }
 
         private static void FixUnityStuff(HtmlNode contentNode)
@@ -80,7 +111,7 @@ namespace OpenUnityDocs.Converter
 
         public static string? GetMarkdown(HtmlNode node)
         {
-            if (node.InnerText.Trim() == "" && node.Name != "img") return null;
+            if (node.InnerText.Trim() == "" && node.Name != "img" && node.Name != "br") return null;
 
             var sb = new StringBuilder();
             sb.Append(GetPrefix(node));
@@ -106,8 +137,10 @@ namespace OpenUnityDocs.Converter
             string? output;
             switch (node.Name)
             {
+                case "br":
+                    return "\n";
                 case "img":
-                    output = node.GetAttributeValue("alt", null);
+                    output = node.GetAttributeValue("alt", null) ?? "";
                     break;
                 case "#text":
                     if (node.ParentNode.LastChild == node && NoSpaceAfterDot.IsMatch(node.InnerText))
@@ -146,6 +179,25 @@ namespace OpenUnityDocs.Converter
             
             switch (node.Name)
             {
+                case "table":
+                    var cols = node.SelectSingleNode(".//tr")?.SelectNodes(".//td")?.Count;
+                    if (cols == null) return null; // table empty
+                    if (node.SelectSingleNode(".//thead") == null || node.SelectSingleNode(".//th") == null)
+                    {
+                        var headers = Enumerable.Range(0, cols.Value).Select(x => " --- ");
+                        var seperator = $"| {prefix}{string.Join("|", headers)} |\n";
+                        return $"| {string.Join("|", Enumerable.Range(0, cols.Value).Select(x => "     "))} |\n{seperator}"; // empty - else invalid syntax
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                case "thead":
+                    var headerColumns = node.SelectNodes(".//th") ?? node.SelectNodes(".//td");
+                    if (headerColumns == null) return null; // handled in "table"
+                    return $"{string.Join("|", headerColumns.Select(x => $" {x.InnerText} "))}\n";
+                case "tr":
+                    return "|";
                 case "h1":
                     return $"{prefix}# ";
                 case "h2":
@@ -160,8 +212,6 @@ namespace OpenUnityDocs.Converter
                     return "[";
                 case "code":
                     return "`";
-                case "br":
-                    return "\n";
                 case "strong":
                     return $"**";
                 case "pre":
@@ -196,8 +246,11 @@ namespace OpenUnityDocs.Converter
         {
             switch (node.Name)
             {
+                case "td":
+                    return "|";
                 case "strong":
                     return "**";
+                case "table":
                 case "h1":
                 case "h2":
                 case "h3":
@@ -228,6 +281,7 @@ namespace OpenUnityDocs.Converter
                     return "`";
                 case "pre":
                     return "```\n\n";
+                case "tr":
                 case "figure":
                     return "\n";
                 case "img":

@@ -2,6 +2,7 @@
 {
     internal enum ExitCode
     {
-        FAILED_TO_PARSE_SOME_FILES = 10
+        INPUT_INVALID = 10,
+        FAILED_TO_PARSE_SOME_FILES = 11
     }
 }
