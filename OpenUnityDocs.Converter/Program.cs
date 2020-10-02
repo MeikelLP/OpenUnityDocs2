@@ -32,7 +32,14 @@ namespace OpenUnityDocs.Converter
 
             if (!options.Ignored.Any())
             {
-                options.Ignored = new[] {"UnityIAPStoreGuides.html", "30_search.html", "AssetImporters.ScriptedImporter.Awake.html", "EditorWindow.OnDidOpenScene.html"}; // these files are useless
+                options.Ignored = new[]
+                {
+                    "UnityIAPStoreGuides.html", 
+                    "30_search.html", 
+                    "AssetImporters.ScriptedImporter.Awake.html", 
+                    "Experimental.AssetImporters.ScriptedImporter.Awake.html", 
+                    "EditorWindow.OnDidOpenScene.html"
+                }; // these files are useless
             }
 
             // use dir if path is a dir
