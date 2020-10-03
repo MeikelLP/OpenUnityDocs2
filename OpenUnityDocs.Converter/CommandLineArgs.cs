@@ -12,9 +12,15 @@ namespace OpenUnityDocs.Converter
         public string OutputDir { get; set; }
         
         [Option('c', "clean", Default = false, HelpText = "Clears target directory before executing")]
-        public bool Clean { get; set; }
+        public bool IsClean { get; set; }
 
         [Option('i', "ignore", HelpText = "File names (excluding directory) to ignore if using --folder option")]
-        public IEnumerable<string> Ignored { get; set; }
+        public IEnumerable<string> IgnoredFileNames { get; set; }
+
+        [Option('r', "recursive", Default = false, HelpText = "If path is a folder, scan for files recursively")]
+        public bool IsRecursive { get; set; }
+
+        [Option('q', "quiet", Default = false, HelpText = "No info output")]
+        public bool IsQuiet { get; set; }
     }
 }
