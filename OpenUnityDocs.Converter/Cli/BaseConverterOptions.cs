@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using CommandLine;
 
-namespace OpenUnityDocs.Converter
+namespace OpenUnityDocs.Converter.Cli
 {
-    public class CommandLineArgs
+    public abstract class BaseConverterOptions : BaseOptions
     {
         [Value(0, Required = true, Default = "*", HelpText = "File or directory to convert")]
         public string InputPath { get; set; }
@@ -19,8 +19,5 @@ namespace OpenUnityDocs.Converter
 
         [Option('r', "recursive", Default = false, HelpText = "If path is a folder, scan for files recursively")]
         public bool IsRecursive { get; set; }
-
-        [Option('q', "quiet", Default = false, HelpText = "No info output")]
-        public bool IsQuiet { get; set; }
     }
 }

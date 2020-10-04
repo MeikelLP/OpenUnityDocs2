@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommandLine;
+using OpenUnityDocs.Converter.Cli;
 
 namespace OpenUnityDocs.Converter
 {
@@ -11,10 +12,12 @@ namespace OpenUnityDocs.Converter
     {
         private static void Main(string[] args)
         {
-            Parser.Default.ParseArguments<CommandLineArgs>(args).WithParsed(options => Run(options).Wait());
+            Parser.Default.ParseArguments<Html2MarkdownOptions, Markdown2HtmlOptions>(args)
+                .WithParsed<Html2MarkdownOptions>(options => Run(options).Wait())
+                .WithParsed<Markdown2HtmlOptions>(options => Run(options).Wait());
         }
 
-        private static async Task Run(CommandLineArgs options)
+        private static async Task Run(BaseConverterOptions options)
         {
             if (options.IsClean)
             {
@@ -22,6 +25,20 @@ namespace OpenUnityDocs.Converter
             }
 
             if (!Directory.Exists(options.OutputDir)) Directory.CreateDirectory(options.OutputDir);
+
+            IConverter converter;
+            if (options is Html2MarkdownOptions)
+            {
+                converter = new Html2MdConverter();
+            }
+            else if (options is Markdown2HtmlOptions)
+            {
+                converter = new Markdown2HtmlConverter();
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(options));
+            }
 
             var dirInfo = new DirectoryInfo(options.InputPath);
             if (!dirInfo.Exists && !File.Exists(options.InputPath))
@@ -49,7 +66,7 @@ namespace OpenUnityDocs.Converter
             if (dirInfo.Exists)
             {
                 files = Directory
-                    .GetFiles(dirInfo.FullName, "*.html", options.IsRecursive
+                    .GetFiles(dirInfo.FullName, $"*{converter.InFileEnding}", options.IsRecursive
                         ? SearchOption.AllDirectories
                         : SearchOption.TopDirectoryOnly)
                     .Where(x => !options.IgnoredFileNames.Contains(Path.GetFileName(x)))
@@ -74,25 +91,24 @@ namespace OpenUnityDocs.Converter
                 files = new[] {options.InputPath};
             }
 
-            var errors = new Dictionary<string, Exception>();
-            using var progressBar = new ProgressBar();
-
-            // parallels tasks
             var startTime = DateTime.UtcNow;
+            var errors = new Dictionary<string, Exception>();
+            using (var progressBar = new ProgressBar())
+            {
+                if (!options.IsQuiet)
+                {
+                    Console.WriteLine($"Starting on {startTime.ToLocalTime()}");
+                }
 
-            if (!options.IsQuiet)
-            {
-                Console.WriteLine($"Starting on {startTime.ToLocalTime()}");
-            }
-            
-            // run all tasks in parallel
-            // should massively increase performance on non Windows systems
-            var tasks = files.Select((x, i) => Task.Run(() => ParseFileAsync(i, x, errors, options))).ToList();
-            
-            var entireTask = Task.WhenAll(tasks);
-            while (await Task.WhenAny(entireTask, Task.Delay(1000)) != entireTask)
-            {
-                progressBar.Report(Math.Abs(tasks.Count(x => x.IsCompleted) / (double)files.Length));
+                // run all tasks in parallel
+                // should massively increase performance on non Windows systems
+                var tasks = files.Select(x => Task.Run(() => ConvertFileAsync(converter, x, errors, options))).ToList();
+
+                var entireTask = Task.WhenAll(tasks);
+                while (await Task.WhenAny(entireTask, Task.Delay(1000)) != entireTask)
+                {
+                    progressBar.Report(Math.Abs(tasks.Count(x => x.IsCompleted) / (double) files.Length));
+                }
             }
 
             var endTime = DateTime.UtcNow;
@@ -101,6 +117,7 @@ namespace OpenUnityDocs.Converter
             {
                 Console.WriteLine();
             }
+
             if (!options.IsQuiet)
             {
                 Console.WriteLine($"Took {(endTime - startTime).TotalSeconds:F2}s");
@@ -114,24 +131,30 @@ namespace OpenUnityDocs.Converter
             }
         }
 
-        private static async Task ParseFileAsync(int i, string filePath, IDictionary<string, Exception> errors, CommandLineArgs options)
+        private static async Task ConvertFileAsync(IConverter converter, string filePath,
+            IDictionary<string, Exception> errors, BaseConverterOptions options)
         {
             try
             {
-                var markdown = await UnityDocsConverter.ParseAsync(filePath!);
+                var result = await converter.ConvertAsync(filePath!);
 
                 // if recursive and file is not in root dir
                 // put file into a sub folder inside the out dir
-                var outPartDir = Path.GetDirectoryName(filePath)!.Replace(options.InputPath, "").Trim('/', '\\');
+                var outPartDir = Path.GetDirectoryName(filePath)!
+                    .Replace(
+                        Directory.Exists(options.InputPath)
+                            ? options.InputPath
+                            : Path.GetDirectoryName(options.InputPath)!, "").Trim('/', '\\');
                 var outDir = Path.Combine(options.OutputDir, outPartDir);
-                var outFileName = Path.Combine(outDir, Path.ChangeExtension(Path.GetFileName(filePath), ".md")!);
+                var outFileName = Path.Combine(outDir,
+                    Path.ChangeExtension(Path.GetFileName(filePath), converter.OutFileEnding)!);
 
                 if (!Directory.Exists(outDir))
                 {
                     Directory.CreateDirectory(outDir);
                 }
 
-                await File.WriteAllTextAsync(outFileName, markdown.Trim() + "\n");
+                await File.WriteAllTextAsync(outFileName, result.Trim() + "\n");
             }
             catch (Exception e)
             {

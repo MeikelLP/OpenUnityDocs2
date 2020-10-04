@@ -8,12 +8,15 @@ using HtmlAgilityPack;
 
 namespace OpenUnityDocs.Converter
 {
-    public class UnityDocsConverter
+    /// <summary>
+    /// Special converter for Unity
+    /// </summary>
+    public class Html2MdConverter : IConverter
     {
         private static readonly Regex EmptyRowsRegex = new Regex("\n{2,}", RegexOptions.Compiled);
-        private static readonly Regex NoSpaceAfterDot = new Regex(".(\\s+)$", RegexOptions.Compiled);
-        
-        public static async Task<string> ParseAsync(string filePath)
+        private static readonly Regex NoSpaceAfterSentenceFinalizer = new Regex("([\\.|;])(\\s+)$", RegexOptions.Compiled);
+
+        public async Task<string> ConvertAsync(string filePath)
         {
             var text = await File.ReadAllTextAsync(filePath);
             var doc = new HtmlDocument();
@@ -39,18 +42,24 @@ namespace OpenUnityDocs.Converter
             else
             {
                 // Manual
-                output =  ParseManual(contentNode);
+                output = ParseManual(contentNode);
             }
+
             output = EmptyRowsRegex.Replace(output, "\n\n");
             return output;
         }
 
+        public string OutFileEnding => ".md";
+        public string InFileEnding => ".html";
+
         private static string ParseScriptReference(HtmlNode containerNode)
         {
-            var relevantNodes = containerNode.SelectNodes(".//*[contains(concat(\" \",normalize-space(@class),\" \"),\" subsection \")]");
+            var relevantNodes =
+                containerNode.SelectNodes(
+                    ".//*[contains(concat(\" \",normalize-space(@class),\" \"),\" subsection \")]");
 
             var name = containerNode.SelectSingleNode(".//h1").InnerText;
-            
+
             var sb = new StringBuilder();
             sb.Append($"# {name}\n\n");
             foreach (var relevantNode in relevantNodes)
@@ -64,14 +73,17 @@ namespace OpenUnityDocs.Converter
 
         private static string ParseManual(HtmlNode containerNode)
         {
-            var headerNode = containerNode.SelectSingleNode(".//h1") ?? containerNode.SelectSingleNode(".//h2"); // because unity doesn't like h1 some times
+            var headerNode =
+                containerNode.SelectSingleNode(".//h1") ??
+                containerNode.SelectSingleNode(".//h2"); // because unity doesn't like h1 some times
             var name = headerNode.InnerText.Trim();
 
             var currentNode = headerNode.NextSibling;
-            
+
             var sb = new StringBuilder();
             sb.Append($"# {name}\n\n");
-            while ((currentNode = currentNode.NextSibling) != null && currentNode.Id != "_content") // stop at id="_content"
+            while ((currentNode = currentNode.NextSibling) != null && currentNode.Id != "_content"
+            ) // stop at id="_content"
             {
                 var element = GetMarkdown(currentNode);
                 sb.Append(element);
@@ -142,14 +154,15 @@ namespace OpenUnityDocs.Converter
                     output = node.GetAttributeValue("alt", null) ?? "";
                     break;
                 case "#text":
-                    if (node.ParentNode.LastChild == node && NoSpaceAfterDot.IsMatch(node.InnerText))
+                    if (node.ParentNode.LastChild == node && NoSpaceAfterSentenceFinalizer.IsMatch(node.InnerText))
                     {
-                        output = NoSpaceAfterDot.Replace(node.InnerText, ".");
+                        output = NoSpaceAfterSentenceFinalizer.Replace(node.InnerText, "$1");
                     }
                     else
                     {
                         output = node.InnerText;
                     }
+
                     break;
                 default:
                     output = node.InnerText;
@@ -175,9 +188,13 @@ namespace OpenUnityDocs.Converter
             var prefix = indentionLevel > 0
                 ? string.Join("", Enumerable.Range(0, indentionLevel).Select(x => "    "))
                 : "";
-            
+
             switch (node.Name)
             {
+                case "div" when node.HasClass("sig-block"):
+                    // example ScriptReference/Rigidbody-collisionDetectionMode.html
+                    // script block covered as div
+                    return $"{prefix}```csharp\n";
                 case "table":
                     var cols = node.SelectSingleNode(".//tr")?.SelectNodes(".//td")?.Count;
                     if (cols == null) return null; // table empty
@@ -185,7 +202,8 @@ namespace OpenUnityDocs.Converter
                     {
                         var headers = Enumerable.Range(0, cols.Value).Select(x => " --- ");
                         var seperator = $"| {prefix}{string.Join("|", headers)} |\n";
-                        return $"| {string.Join("|", Enumerable.Range(0, cols.Value).Select(x => "     "))} |\n{seperator}"; // empty - else invalid syntax
+                        return
+                            $"| {string.Join("|", Enumerable.Range(0, cols.Value).Select(x => "     "))} |\n{seperator}"; // empty - else invalid syntax
                     }
                     else
                     {
@@ -207,12 +225,12 @@ namespace OpenUnityDocs.Converter
                     return $"{prefix}![";
                 case "figcaption":
                     return $"\n{prefix}| ";
-                case "a":
+                case "a" when !node.HasParentWithClass("sig-block"): // don't convert links in code blocks as this is not markdown compliant
                     return "[";
                 case "code":
                     return "`";
                 case "strong":
-                    return $"**";
+                    return "**";
                 case "pre":
                     return $"{prefix}```csharp\n";
                 case "ul":
@@ -223,19 +241,11 @@ namespace OpenUnityDocs.Converter
                     // }
 
                     return null;
-                case "li":
-                    
-                    if (node.ParentNode.Name == "ul")
-                    {
-                        return $"{prefix}* ";
-                    }
-                    else if (node.ParentNode.Name == "ol")
-                    {
-                        var index = node.ParentNode.ChildNodes.Where(x => x.Name == "li").ToList().IndexOf(node) + 1;
-                        return $"{prefix}{index}. ";
-                    }
-
-                    throw new ArgumentException("li must be child of ol or ul");
+                case "li" when node.ParentNode.Name == "ul":
+                    return $"{prefix}* ";
+                case "li" when node.ParentNode.Name == "ol":
+                    var index = node.ParentNode.ChildNodes.Where(x => x.Name == "li").ToList().IndexOf(node) + 1;
+                    return $"{prefix}{index}. ";
                 default:
                     return null;
             }
@@ -245,6 +255,10 @@ namespace OpenUnityDocs.Converter
         {
             switch (node.Name)
             {
+                case "div" when node.HasClass("sig-block"):
+                    // example ScriptReference/Rigidbody-collisionDetectionMode.html
+                    // script block covered as div
+                    return "\n```\n\n";
                 case "td":
                     return "|";
                 case "strong":
@@ -254,27 +268,18 @@ namespace OpenUnityDocs.Converter
                 case "h2":
                 case "h3":
                     return "\n\n";
+                case "p" when node.ParentNode.Name == "li":
+                    return "\n";
                 case "p":
-                    if (node.ParentNode.Name == "li")
-                    {
-                        return "\n";
-                    }
-
                     return "\n\n";
+                case "li" when node.ParentNode.ChildNodes.LastOrDefault(x => x.Name == "li") == node:
+                    return null;
                 case "li":
-                    if (node.ParentNode.ChildNodes.LastOrDefault(x => x.Name == "li") == node)
-                    {
-                        return null;
-                    }
-
                     return "\n";
                 case "ol":
+                case "ul" when node.HasParentWithName("ol") || node.HasParentWithName("ul") || node.HasParentWithName("li"):
+                    return "";
                 case "ul":
-                    if (node.HasParentWithName("ol") || node.HasParentWithName("ul") || node.HasParentWithName("li"))
-                    {
-                        return "";
-                    }
-
                     return "\n\n";
                 case "code":
                     return "`";
@@ -284,8 +289,9 @@ namespace OpenUnityDocs.Converter
                 case "figure":
                     return "\n";
                 case "img":
-                    var src = node.GetAttributeValue("src", null);
-                    return $"]({src})";
+                    return $"]({node.GetAttributeValue("src", null)})";
+                case "a" when node.HasParentWithClass("sig-block"):
+                    return " "; // unity special case
                 case "a":
                     var title = node.GetAttributeValue("title", null);
                     title = title != null ? $" \"{title}\"" : null;
